@@ -9,7 +9,9 @@ from pathlib import Path
 import deepeval
 import pytest
 from deepeval import assert_test
-from deepeval.test_case import LLMTestCase, ToolCall
+from deepeval.dataset import Golden
+from deepeval.test_case import ToolCall
+from deepeval.tracing import update_current_trace
 
 import my_agent
 from my_agent.config import Config
@@ -20,7 +22,7 @@ from .harness import CaseResult, EvalCase, load_cases, run_case
 from .metrics import build_metrics
 
 CASES = load_cases(os.getenv("MYAGENT_EVAL_DATASET", "*.json"))
-MAX_TOOL_OUTPUT_IN_REPORT = 2000
+EVAL_PROTOCOL = "native-trace-v1"
 
 
 def _git_commit() -> str:
@@ -40,6 +42,9 @@ def hyperparameters():
     cfg = Config.from_env()
     return {
         "agent_version": my_agent.__version__,
+        "eval_protocol": EVAL_PROTOCOL,
+        "checks_only": os.getenv("MYAGENT_EVAL_CHECKS_ONLY", "0"),
+        "step_efficiency": os.getenv("MYAGENT_EVAL_STEP_EFFICIENCY", "0"),
         "git_commit": _git_commit(),
         "model": cfg.model,
         "judge_model": os.getenv("MYAGENT_JUDGE_MODEL") or cfg.model,
@@ -49,22 +54,14 @@ def hyperparameters():
     }
 
 
-def to_test_case(result: CaseResult) -> LLMTestCase:
+def to_golden(result: CaseResult) -> Golden:
     rec, case = result.record, result.case
-    return LLMTestCase(
+    return Golden(
         name=case.id,
         input=case.input,
-        actual_output=rec.final_output or f"(无最终回复，stop_reason={rec.stop_reason})",
         expected_output=case.expected_output,
-        tools_called=[
-            ToolCall(name=c.name, input_parameters=c.args, output=c.output[:MAX_TOOL_OUTPUT_IN_REPORT])
-            for c in rec.tool_calls
-        ],
         expected_tools=[ToolCall(name=n) for n in case.expected_tools] or None,
-        context=[f"工作区最终文件 diff:\n{result.diff}"],
-        completion_time=rec.duration_s,
-        tags=case.tags or None,
-        metadata={
+        additional_metadata={
             "stop_reason": rec.stop_reason,
             "steps": rec.steps,
             "tool_call_count": len(rec.tool_calls),
@@ -80,9 +77,18 @@ def to_test_case(result: CaseResult) -> LLMTestCase:
 
 @pytest.mark.parametrize("case", CASES, ids=[c.id for c in CASES])
 def test_agent(case: EvalCase, agent_config: Config) -> None:
+    if os.getenv("MYAGENT_EVAL_PROGRESS", "1") != "0":
+        print(f"\n开始用例：{case.id}", flush=True)
     result = run_case(case, agent_config)
+    metrics = []
     try:
-        test_case = to_test_case(result)
-        assert_test(test_case, build_metrics(result), run_async=False)
+        golden = to_golden(result)
+        update_current_trace(expected_tools=golden.expected_tools, metadata=golden.additional_metadata)
+        metrics = build_metrics(result)
+        result.ui.progress(f"Agent 运行结束：{result.record.steps} 步，{result.record.duration_s:.1f}s；开始评分...")
+        assert_test(golden=golden, metrics=metrics)
     finally:
+        for metric in metrics:
+            result.ui.progress(f"评分 {metric.__name__}：{metric.score}（阈值 {metric.threshold}）")
+        result.ui.progress(f"用例结束：{case.id}")
         result.cleanup()

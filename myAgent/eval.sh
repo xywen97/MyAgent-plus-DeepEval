@@ -17,7 +17,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-"$DEEPEVAL" test run evals/test_agent.py "${PYTEST_ARGS[@]+"${PYTEST_ARGS[@]}"}"
+"$DEEPEVAL" test run evals/test_agent.py --verbose "${PYTEST_ARGS[@]+"${PYTEST_ARGS[@]}"}"
 status=$?
 
 echo

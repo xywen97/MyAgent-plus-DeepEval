@@ -3,13 +3,18 @@ from __future__ import annotations
 
 import difflib
 import json
+import os
 import shutil
 import tempfile
-from contextlib import nullcontext
+from contextlib import contextmanager
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from my_agent.agent import Agent, RunRecord
+from my_agent.agent import RunRecord
+from deepeval.tracing import update_current_trace
+
+from .tracing import TracedAgent, TracedCompletions
 from my_agent.config import Config
 from my_agent.tools.base import is_binary, iter_files
 
@@ -53,9 +58,21 @@ class HeadlessUI:
         self.events: list[tuple] = []
         self.denied_commands: list[str] = []
         self.questions_asked = 0
+        self.model_calls = 0
 
+    def progress(self, text: str) -> None:
+        if os.getenv("MYAGENT_EVAL_PROGRESS", "1") != "0":
+            print(f"  {text}", flush=True)
+
+    @contextmanager
     def thinking(self):
-        return nullcontext()
+        self.model_calls += 1
+        start = time.perf_counter()
+        self.progress(f"模型调用 #{self.model_calls}：等待响应...")
+        try:
+            yield
+        finally:
+            self.progress(f"模型调用 #{self.model_calls} 结束，耗时 {time.perf_counter() - start:.1f}s")
 
     def assistant(self, text: str) -> None:
         self.events.append(("assistant", text))
@@ -65,12 +82,14 @@ class HeadlessUI:
 
     def error(self, text: str) -> None:
         self.events.append(("error", text))
+        self.progress(text)
 
     def tool_call(self, name: str, args: dict) -> None:
-        pass
+        self.progress(f"执行工具 {name}")
 
     def tool_result(self, name: str, result: str) -> None:
-        pass
+        outcome = "错误" if result.startswith("Error") else "返回结果"
+        self.progress(f"工具 {name}：{outcome}")
 
     def confirm_command(self, command: str, explanation: str | None) -> bool:
         if not self.approve_commands:
@@ -151,7 +170,22 @@ def run_case(case: EvalCase, base_cfg: Config) -> CaseResult:
         language=base_cfg.language,
     )
     ui = HeadlessUI(case.approve_commands, case.followup_answer)
-    agent = Agent(cfg, ui)
-    agent.run(case.input.replace("{workspace}", str(workspace)))
-    assert agent.last_run is not None
-    return CaseResult(case, agent.last_run, workspace, before, snapshot(workspace), ui)
+    agent = TracedAgent(cfg, ui)
+    agent.client.chat.completions = TracedCompletions(agent.client.chat.completions)
+    try:
+        agent.run(case.input.replace("{workspace}", str(workspace)))
+        assert agent.last_run is not None
+        result = CaseResult(case, agent.last_run, workspace, before, snapshot(workspace), ui)
+        update_current_trace(
+            name=case.id,
+            input=case.input,
+            output=agent.eval_span.output,
+            tools_called=agent.eval_span.tools_called,
+            expected_output=case.expected_output,
+            context=[f"任务验收标准: {case.criteria or case.input}", f"工作区最终文件 diff:\n{result.diff}"],
+            tags=case.tags,
+        )
+        return result
+    except BaseException:
+        shutil.rmtree(workspace, ignore_errors=True)
+        raise

@@ -1,0 +1,148 @@
+[
+  {
+    "id": "generated_20261012080510_1",
+    "input": "临时目录中已有 `math_ops.py` 和基于 `unittest` 的测试文件；要求所有 `unittest` 通过，如何只修改 `math_ops.py` 实现 `gcd_list` 和 `lcm_list`，并且不修改任何测试文件？",
+    "files": {
+      "math_ops.py": "def gcd_list(numbers):\n    raise NotImplementedError\n\n\ndef lcm_list(numbers):\n    raise NotImplementedError\n",
+      "tests/__init__.py": "",
+      "tests/test_math_ops.py": "import unittest\n\nimport math_ops\n\n\nclass GcdListTests(unittest.TestCase):\n    def test_empty(self):\n        self.assertEqual(math_ops.gcd_list([]), 0)\n\n    def test_single_positive(self):\n        self.assertEqual(math_ops.gcd_list([7]), 7)\n\n    def test_single_negative(self):\n        self.assertEqual(math_ops.gcd_list([-7]), 7)\n\n    def test_single_zero(self):\n        self.assertEqual(math_ops.gcd_list([0]), 0)\n\n    def test_multiple_positive(self):\n        self.assertEqual(math_ops.gcd_list([12, 18, 24]), 6)\n\n    def test_multiple_mixed_signs(self):\n        self.assertEqual(math_ops.gcd_list([-12, 18, -24]), 6)\n\n    def test_with_zero(self):\n        self.assertEqual(math_ops.gcd_list([0, 5, 10]), 5)\n\n    def test_all_zeros(self):\n        self.assertEqual(math_ops.gcd_list([0, 0, 0]), 0)\n\n\nclass LcmListTests(unittest.TestCase):\n    def test_empty(self):\n        self.assertEqual(math_ops.lcm_list([]), 1)\n\n    def test_single_positive(self):\n        self.assertEqual(math_ops.lcm_list([7]), 7)\n\n    def test_single_negative(self):\n        self.assertEqual(math_ops.lcm_list([-7]), 7)\n\n    def test_single_zero(self):\n        self.assertEqual(math_ops.lcm_list([0]), 0)\n\n    def test_multiple_positive(self):\n        self.assertEqual(math_ops.lcm_list([4, 6, 8]), 24)\n\n    def test_multiple_mixed_signs(self):\n        self.assertEqual(math_ops.lcm_list([-4, 6, -8]), 24)\n\n    def test_with_zero(self):\n        self.assertEqual(math_ops.lcm_list([0, 5, 10]), 0)\n\n    def test_all_zeros(self):\n        self.assertEqual(math_ops.lcm_list([0, 0, 0]), 0)\n\n\nif __name__ == \"__main__\":\n    unittest.main()\n"
+    },
+    "checks": [
+      {
+        "type": "file_exists",
+        "path": "math_ops.py"
+      },
+      {
+        "type": "file_exists",
+        "path": "tests/__init__.py"
+      },
+      {
+        "type": "file_exists",
+        "path": "tests/test_math_ops.py"
+      },
+      {
+        "type": "unchanged",
+        "path": "tests/test_math_ops.py"
+      },
+      {
+        "type": "command",
+        "cmd": "{python} -m unittest discover -s tests"
+      }
+    ],
+    "expected_tools": [
+      "read_file",
+      "replace_in_file"
+    ],
+    "criteria": "仅修改 math_ops.py 实现 gcd_list 和 lcm_list，使 tests/test_math_ops.py 中所有 unittest 通过；不得修改 tests/ 目录下任何文件。",
+    "tags": [
+      "generated",
+      "reviewed"
+    ],
+    "approve_commands": false
+  },
+  {
+    "id": "generated_20261012080510_2",
+    "input": "已有 `log_parser.py`，请修复其空行与空格字段的词法解析异常，确保单元测试通过；不要修改测试文件。",
+    "files": {
+      "log_parser.py": "def parse_log_line(line):\n    pairs = line.split(' ')\n    result = {}\n    for pair in pairs:\n        key, value = pair.split('=')\n        result[key] = value\n    return result\n",
+      "tests/test_log_parser.py": "import unittest\nfrom log_parser import parse_log_line\n\nclass TestLogParser(unittest.TestCase):\n    def test_empty_line(self):\n        self.assertEqual(parse_log_line(''), {})\n\n    def test_whitespace_only(self):\n        self.assertEqual(parse_log_line('   '), {})\n\n    def test_normal(self):\n        self.assertEqual(parse_log_line('level=INFO msg=hello'), {'level': 'INFO', 'msg': 'hello'})\n\n    def test_multiple_spaces(self):\n        self.assertEqual(parse_log_line('level=INFO   msg=hello'), {'level': 'INFO', 'msg': 'hello'})\n\n    def test_leading_trailing_spaces(self):\n        self.assertEqual(parse_log_line('  level=INFO msg=hello  '), {'level': 'INFO', 'msg': 'hello'})\n\n    def test_value_with_equals(self):\n        self.assertEqual(parse_log_line('key=a=b'), {'key': 'a=b'})\n\n    def test_invalid_token(self):\n        with self.assertRaises(ValueError):\n            parse_log_line('key')\n\n    def test_empty_key(self):\n        with self.assertRaises(ValueError):\n            parse_log_line('=value')\n\nif __name__ == '__main__':\n    unittest.main()\n"
+    },
+    "checks": [
+      {
+        "type": "file_exists",
+        "path": "log_parser.py"
+      },
+      {
+        "type": "file_exists",
+        "path": "tests/test_log_parser.py"
+      },
+      {
+        "type": "unchanged",
+        "path": "tests/test_log_parser.py"
+      },
+      {
+        "type": "command",
+        "cmd": "{python} -m unittest discover -s tests"
+      }
+    ],
+    "expected_tools": [
+      "read_file"
+    ],
+    "criteria": "修复 log_parser.py，使空行和多余空格不再引发异常，无效 token 抛出 ValueError；tests/test_log_parser.py 中所有 unittest 通过；测试文件未被修改。",
+    "tags": [
+      "generated",
+      "reviewed"
+    ],
+    "approve_commands": false
+  },
+  {
+    "id": "generated_20261012080510_4",
+    "input": "请创建 matrix.py，实现 add、transpose、det 函数，仅使用标准库，并确保运行 unittest 通过；现有 test_matrix.py 用于验收，不要修改它。",
+    "files": {
+      "tests/test_matrix.py": "import unittest\n\nimport matrix\n\n\nclass TestMatrix(unittest.TestCase):\n    def test_add_normal(self):\n        a = [[1, 2], [3, 4]]\n        b = [[5, 6], [7, 8]]\n        self.assertEqual(matrix.add(a, b), [[6, 8], [10, 12]])\n\n    def test_add_1x1(self):\n        self.assertEqual(matrix.add([[1]], [[2]]), [[3]])\n\n    def test_add_dimension_mismatch(self):\n        with self.assertRaises(ValueError):\n            matrix.add([[1, 2]], [[1]])\n\n    def test_transpose_normal(self):\n        self.assertEqual(\n            matrix.transpose([[1, 2, 3], [4, 5, 6]]),\n            [[1, 4], [2, 5], [3, 6]],\n        )\n\n    def test_transpose_empty(self):\n        self.assertEqual(matrix.transpose([]), [])\n\n    def test_transpose_1x1(self):\n        self.assertEqual(matrix.transpose([[7]]), [[7]])\n\n    def test_det_1x1(self):\n        self.assertAlmostEqual(matrix.det([[5]]), 5.0)\n\n    def test_det_2x2(self):\n        self.assertAlmostEqual(matrix.det([[1, 2], [3, 4]]), -2.0)\n\n    def test_det_3x3_identity(self):\n        self.assertAlmostEqual(\n            matrix.det([[1, 0, 0], [0, 1, 0], [0, 0, 1]]),\n            1.0,\n        )\n\n    def test_det_singular(self):\n        self.assertAlmostEqual(matrix.det([[1, 2], [2, 4]]), 0.0)\n\n    def test_det_empty(self):\n        self.assertAlmostEqual(matrix.det([]), 1.0)\n\n    def test_det_non_square(self):\n        with self.assertRaises(ValueError):\n            matrix.det([[1, 2, 3], [4, 5, 6]])\n\n\nif __name__ == '__main__':\n    unittest.main()\n"
+    },
+    "checks": [
+      {
+        "type": "file_exists",
+        "path": "matrix.py"
+      },
+      {
+        "type": "file_exists",
+        "path": "tests/test_matrix.py"
+      },
+      {
+        "type": "unchanged",
+        "path": "tests/test_matrix.py"
+      },
+      {
+        "type": "command",
+        "cmd": "{python} -m unittest discover -s tests"
+      }
+    ],
+    "expected_tools": [
+      "read_file",
+      "write_to_file"
+    ],
+    "criteria": "matrix.py 实现 add、transpose、det，仅使用标准库；tests/test_matrix.py 保持不变；运行 {python} -m unittest discover -s tests 全部通过。",
+    "tags": [
+      "generated",
+      "reviewed"
+    ],
+    "approve_commands": false
+  },
+  {
+    "id": "generated_20261012080510_5",
+    "input": "绝对路径读修 `config_loader.py` Win 路径拼接，跑 stdlib 测试，勿改 `test_config_loader.py`，不可读先列上下文。",
+    "files": {
+      "config_loader.py": "import os\n\ndef build_windows_path(base_dir, filename):\n    return os.path.join(base_dir, filename)\n",
+      "tests/test_config_loader.py": "import unittest\nimport ntpath\nfrom config_loader import build_windows_path\n\nclass TestConfigLoader(unittest.TestCase):\n    def test_normal_join(self):\n        self.assertEqual(build_windows_path('C:\\\\Users\\\\Test', 'config.ini'),\n                         ntpath.join('C:\\\\Users\\\\Test', 'config.ini'))\n\n    def test_trailing_backslash(self):\n        self.assertEqual(build_windows_path('C:\\\\Users\\\\Test\\\\', 'config.ini'),\n                         ntpath.join('C:\\\\Users\\\\Test\\\\', 'config.ini'))\n\n    def test_absolute_filename(self):\n        self.assertEqual(build_windows_path('C:\\\\Users\\\\Test', 'D:\\\\other\\\\config.ini'),\n                         ntpath.join('C:\\\\Users\\\\Test', 'D:\\\\other\\\\config.ini'))\n\n    def test_rooted_filename(self):\n        self.assertEqual(build_windows_path('C:\\\\Users\\\\Test', '\\\\config.ini'),\n                         ntpath.join('C:\\\\Users\\\\Test', '\\\\config.ini'))\n\n    def test_empty_filename(self):\n        self.assertEqual(build_windows_path('C:\\\\Users\\\\Test', ''),\n                         ntpath.join('C:\\\\Users\\\\Test', ''))\n\n    def test_empty_base(self):\n        self.assertEqual(build_windows_path('', 'config.ini'),\n                         ntpath.join('', 'config.ini'))\n\nif __name__ == '__main__':\n    unittest.main()\n"
+    },
+    "checks": [
+      {
+        "type": "file_exists",
+        "path": "config_loader.py"
+      },
+      {
+        "type": "file_exists",
+        "path": "tests/test_config_loader.py"
+      },
+      {
+        "type": "unchanged",
+        "path": "tests/test_config_loader.py"
+      },
+      {
+        "type": "command",
+        "cmd": "{python} -m unittest discover -s tests"
+      }
+    ],
+    "expected_tools": [
+      "read_file"
+    ],
+    "criteria": "使用绝对路径读取并修复 config_loader.py，使用 ntpath.join 实现 Windows 路径拼接；运行 python -m unittest discover -s tests 全部通过；不得修改 tests/test_config_loader.py。",
+    "tags": [
+      "generated",
+      "reviewed"
+    ],
+    "approve_commands": false
+  }
+]

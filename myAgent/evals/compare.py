@@ -68,6 +68,16 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("需要 0 个或 2 个结果文件")
 
     base, new = load_run(base_path), load_run(new_path)
+    for run in (base, new):
+        if not run["cases"] or all(c["metadata"].get("stop_reason") == "error" for c in run["cases"].values()):
+            console.print("[yellow]存在空结果或全量运行错误，不能作为有效能力对比。[/yellow]")
+            return 0
+    settings = ("eval_protocol", "checks_only", "step_efficiency", "judge_model")
+    if any(base["hyper"].get(key) != new["hyper"].get(key) for key in settings):
+        console.print("[yellow]评测协议、指标配置或裁判发生变化，本次结果作为新基线，不判定回归。[/yellow]")
+        return 0
+    if set(base["cases"]) != set(new["cases"]):
+        console.print("[yellow]用例集合不同，以下仅对共同用例进行比较。[/yellow]")
 
     for label, run in (("BASE", base), ("NEW ", new)):
         h = run["hyper"]
