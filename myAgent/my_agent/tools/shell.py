@@ -3,10 +3,21 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
+from pathlib import Path
 
 from .base import ToolContext, clip, registry
 
 OUTPUT_LIMIT = 12000
+
+
+def command_environment() -> dict[str, str]:
+    env = {**os.environ, "PAGER": "cat", "GIT_PAGER": "cat"}
+    env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + env.get("PATH", "")
+    if sys.prefix != sys.base_prefix:
+        env["VIRTUAL_ENV"] = sys.prefix
+        env.pop("PYTHONHOME", None)
+    return env
 
 
 def _to_text(value) -> str:
@@ -52,7 +63,7 @@ def execute_command(
             return "用户拒绝执行该命令。不要重试或换方式绕过，请询问用户下一步怎么做。"
 
     shell = os.environ.get("SHELL") or "/bin/sh"
-    env = {**os.environ, "PAGER": "cat", "GIT_PAGER": "cat"}
+    env = command_environment()
     try:
         proc = subprocess.run(
             command,

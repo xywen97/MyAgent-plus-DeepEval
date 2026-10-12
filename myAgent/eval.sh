@@ -4,8 +4,11 @@
 set -uo pipefail
 cd "$(dirname "$0")"
 
-PY=.venv/bin/python
-DEEPEVAL=.venv/bin/deepeval
+PY="$PWD/.venv/bin/python"
+DEEPEVAL="$PWD/.venv/bin/deepeval"
+export PATH="$PWD/.venv/bin:$PATH"
+export VIRTUAL_ENV="$PWD/.venv"
+"$PY" -c 'import sys; assert sys.version_info[:2] == (3, 12), "评测要求 Python 3.12"' || exit 1
 export DEEPEVAL_RESULTS_FOLDER="${DEEPEVAL_RESULTS_FOLDER:-$PWD/evals/results}"
 export DEEPEVAL_TELEMETRY_OPT_OUT=1
 

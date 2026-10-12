@@ -22,7 +22,7 @@ from .harness import CaseResult, EvalCase, load_cases, run_case
 from .metrics import build_metrics
 
 CASES = load_cases(os.getenv("MYAGENT_EVAL_DATASET", "*.json"))
-EVAL_PROTOCOL = "native-trace-v1"
+EVAL_PROTOCOL = "native-trace-v2"
 
 
 def _git_commit() -> str:

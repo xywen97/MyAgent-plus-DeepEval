@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import shlex
+
+from my_agent.tools.shell import command_environment
 
 from deepeval.metrics import BaseMetric, GEval, ToolCorrectnessMetric, TaskCompletionMetric, StepEfficiencyMetric
 import os
@@ -29,7 +32,16 @@ def _check(result: CaseResult, spec: dict) -> tuple[bool, str]:
     if kind == "file_not_contains":
         return spec["text"] not in after.get(spec["path"], ""), f"{spec['path']} 不应包含 {spec['text']!r}"
     if kind == "unchanged":
-        paths = spec.get("paths") or list(before)
+        if "paths" in spec:
+            paths = spec["paths"]
+            if not isinstance(paths, list) or not paths or not all(isinstance(p, str) and p for p in paths):
+                raise ValueError("unchanged.paths 必须是非空字符串数组")
+        elif "path" in spec:
+            if not isinstance(spec["path"], str) or not spec["path"]:
+                raise ValueError("unchanged.path 必须是非空字符串")
+            paths = [spec["path"]]
+        else:
+            paths = list(before)
         changed = [p for p in paths if before.get(p) != after.get(p)]
         return not changed, f"以下文件不应被修改: {changed}"
     if kind == "output_contains_any":
@@ -43,8 +55,9 @@ def _check(result: CaseResult, spec: dict) -> tuple[bool, str]:
     if kind == "max_tool_calls":
         return len(called) <= spec["n"], f"工具调用 {len(called)} 次，上限 {spec['n']}"
     if kind == "command":
-        cmd = spec["cmd"].replace("{python}", sys.executable)
-        proc = subprocess.run(cmd, shell=True, cwd=result.workspace, capture_output=True, text=True, timeout=60)
+        cmd = spec["cmd"].replace("{python}", shlex.quote(sys.executable))
+        proc = subprocess.run(cmd, shell=True, cwd=result.workspace, env=command_environment(),
+                              capture_output=True, text=True, timeout=60)
         detail = (proc.stdout + proc.stderr).strip()[-500:]
         return proc.returncode == 0, f"命令 `{spec['cmd']}` 退出码 {proc.returncode} {detail}"
     raise ValueError(f"未知检查类型: {kind}")
