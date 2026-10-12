@@ -1,0 +1,3 @@
+-r requirements.txt
+# 本地 deepeval 源码（可编辑安装，改动 deepeval 后无需重装）
+-e ../deepeval

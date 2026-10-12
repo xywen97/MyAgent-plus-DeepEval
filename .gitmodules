@@ -1,0 +1,3 @@
+[submodule "deepeval"]
+	path = deepeval
+	url = https://github.com/confident-ai/deepeval.git
