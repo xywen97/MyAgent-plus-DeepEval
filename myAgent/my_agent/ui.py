@@ -23,6 +23,15 @@ class ConsoleUI:
         with self.console.status("[dim]思考中...[/dim]", spinner="dots"):
             yield
 
+    def stream_text(self, text: str) -> None:
+        self.console.print(text, end="", markup=False, highlight=False, soft_wrap=True)
+        self._stream_active = True
+
+    def stream_end(self) -> None:
+        if getattr(self, "_stream_active", False):
+            self.console.print()
+        self._stream_active = False
+
     def assistant(self, text: str) -> None:
         if text.strip():
             self.console.print(Markdown(text))

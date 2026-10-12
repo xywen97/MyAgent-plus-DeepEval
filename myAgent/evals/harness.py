@@ -74,6 +74,12 @@ class HeadlessUI:
         finally:
             self.progress(f"模型调用 #{self.model_calls} 结束，耗时 {time.perf_counter() - start:.1f}s")
 
+    def stream_text(self, text: str) -> None:
+        self.events.append(("stream", text))
+
+    def stream_end(self) -> None:
+        pass
+
     def assistant(self, text: str) -> None:
         self.events.append(("assistant", text))
 
@@ -168,10 +174,15 @@ def run_case(case: EvalCase, base_cfg: Config) -> CaseResult:
         auto_approve=False,
         max_tool_output=base_cfg.max_tool_output,
         language=base_cfg.language,
+        stream=base_cfg.stream,
+        context_budget=base_cfg.context_budget,
+        context_keep_turns=base_cfg.context_keep_turns,
+        subagent_max_steps=base_cfg.subagent_max_steps,
+        subagent_max_calls=base_cfg.subagent_max_calls,
     )
     ui = HeadlessUI(case.approve_commands, case.followup_answer)
     agent = TracedAgent(cfg, ui)
-    agent.client.chat.completions = TracedCompletions(agent.client.chat.completions)
+    # Model request spans include consumption of streamed responses.
     try:
         agent.run(case.input.replace("{workspace}", str(workspace)))
         assert agent.last_run is not None

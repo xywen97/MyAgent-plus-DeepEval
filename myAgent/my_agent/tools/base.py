@@ -34,12 +34,16 @@ class ToolContext:
     command_timeout: int = 120
     auto_approve: bool = False
     todos: list[dict] = field(default_factory=list)
+    restrict_reads: bool = False
 
     def resolve(self, path: str) -> Path:
         p = Path(path).expanduser()
         if not p.is_absolute():
             p = self.workspace / p
-        return p.resolve()
+        resolved = p.resolve()
+        if self.restrict_reads:
+            self.ensure_in_workspace(resolved)
+        return resolved
 
     def ensure_in_workspace(self, path: Path) -> None:
         try:

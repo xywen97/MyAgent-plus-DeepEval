@@ -33,6 +33,7 @@ def test_native_trace(monkeypatch, tmp_path):
 
     class OfflineAgent(original):
         def __init__(self, cfg, ui):
+            cfg.stream = False
             super().__init__(cfg, ui)
             self.client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(
                 create=lambda **kwargs: responses.pop(0))))

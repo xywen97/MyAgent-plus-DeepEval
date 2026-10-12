@@ -35,6 +35,11 @@ class Config:
     auto_approve: bool = False
     max_tool_output: int = 30000
     language: str = "简体中文 (Simplified Chinese)"
+    stream: bool = True
+    context_budget: int = 24000
+    context_keep_turns: int = 2
+    subagent_max_steps: int = 8
+    subagent_max_calls: int = 2
 
     @classmethod
     def from_env(cls, **overrides) -> "Config":
@@ -49,6 +54,11 @@ class Config:
             max_steps=_env_int("MYAGENT_MAX_STEPS", 50),
             command_timeout=_env_int("MYAGENT_COMMAND_TIMEOUT", 120),
             auto_approve=_env_bool("MYAGENT_AUTO_APPROVE", False),
+            stream=_env_bool("MYAGENT_STREAM", True),
+            context_budget=_env_int("MYAGENT_CONTEXT_BUDGET", 24000),
+            context_keep_turns=_env_int("MYAGENT_CONTEXT_KEEP_TURNS", 2),
+            subagent_max_steps=_env_int("MYAGENT_SUBAGENT_MAX_STEPS", 8),
+            subagent_max_calls=_env_int("MYAGENT_SUBAGENT_MAX_CALLS", 2),
             language=os.getenv("MYAGENT_LANGUAGE") or "简体中文 (Simplified Chinese)",
         )
         for key, value in overrides.items():

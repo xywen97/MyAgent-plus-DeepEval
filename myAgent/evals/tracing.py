@@ -32,6 +32,23 @@ class TracedAgent(Agent):
         update_current_span(output=output or f"(无最终回复，stop_reason={self.last_run.stop_reason})")
         return output
 
+    @observe(type="llm", name="chat_completion")
+    def _request(self):
+        update_current_span(input=self.messages, metadata={"model": self.cfg.model, "stream": self.cfg.stream})
+        response = super()._request()
+        update_current_span(output=response.choices[0].message.model_dump(exclude_none=True))
+        return response
+
+    def _make_subagent(self, cfg, ui):
+        return TracedAgent(cfg, ui)
+
+    @observe(type="llm", name="context_summary")
+    def _summarize(self, history):
+        update_current_span(input=history)
+        summary = super()._summarize(history)
+        update_current_span(output=summary)
+        return summary
+
     @observe(type="tool")
     def _run_tool(self, name: str, raw_args: str | None) -> str:
         try:

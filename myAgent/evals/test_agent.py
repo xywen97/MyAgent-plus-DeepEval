@@ -49,7 +49,10 @@ def hyperparameters():
         "model": cfg.model,
         "judge_model": os.getenv("MYAGENT_JUDGE_MODEL") or cfg.model,
         "system_prompt_sha": hashlib.sha256(SYSTEM_PROMPT_TEMPLATE.encode()).hexdigest()[:12],
-        "tools": ",".join(sorted(registry.names())),
+        "tools": ",".join(sorted([*registry.names(), "delegate_task"])),
+        "stream": cfg.stream,
+        "context_budget": cfg.context_budget,
+        "subagent_max_steps": cfg.subagent_max_steps,
         "run_label": os.getenv("MYAGENT_EVAL_LABEL", ""),
     }
 

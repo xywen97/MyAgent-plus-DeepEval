@@ -1,0 +1,111 @@
+[
+  {
+    "id": "generated_20261012090810_2",
+    "input": "在当前隔离临时目录中，已有 `data.txt`、`script.py` 和 `tests/test_script.py`。请阅读这些文件，然后比较专用文件读写/搜索工具与 shell 命令在读取、搜索、编辑和运行测试上的区别，并给出分析。不要修改任何文件，尤其不要修改 `tests/test_script.py`。",
+    "files": {
+      "data.txt": "apple\nbanana\ncherry\ndate\n",
+      "script.py": "def add(a, b):\n    return a + b\n\ndef multiply(a, b):\n    return a * b\n",
+      "tests/test_script.py": "import unittest\nimport sys\nimport os\n\nsys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))\n\nfrom script import add, multiply\n\nclass TestScript(unittest.TestCase):\n    def test_add(self):\n        self.assertEqual(add(1, 2), 3)\n        self.assertEqual(add(-1, 1), 0)\n        self.assertEqual(add(0, 0), 0)\n\n    def test_multiply(self):\n        self.assertEqual(multiply(2, 3), 6)\n        self.assertEqual(multiply(-1, 5), -5)\n        self.assertEqual(multiply(0, 10), 0)\n\nif __name__ == '__main__':\n    unittest.main()\n"
+    },
+    "checks": [
+      {
+        "type": "file_exists",
+        "path": "data.txt"
+      },
+      {
+        "type": "file_exists",
+        "path": "script.py"
+      },
+      {
+        "type": "file_exists",
+        "path": "tests/test_script.py"
+      },
+      {
+        "type": "unchanged",
+        "path": "tests/test_script.py"
+      },
+      {
+        "type": "command",
+        "cmd": "{python} -m unittest discover -s tests"
+      }
+    ],
+    "expected_tools": [
+      "read_file"
+    ],
+    "criteria": "Agent 必须阅读 data.txt、script.py 和 tests/test_script.py，比较专用文件读写/搜索工具与 shell 命令在读取、搜索、编辑和运行测试上的区别，并给出分析。不得修改任何文件，尤其是 tests/test_script.py。测试必须通过。",
+    "tags": [
+      "generated",
+      "reviewed"
+    ],
+    "approve_commands": false
+  },
+  {
+    "id": "generated_20261012090810_4",
+    "input": "在隔离临时目录中已有 `data/sales.csv` 和 `summarize_sales.py`。请只读分析并比较：使用专用文件读写工具与使用 shell 命令读取 `data/sales.csv`、编辑 `summarize_sales.py` 时有哪些差异和风险；用 Python 标准库实现必要的只读检查，并给出适合该编码 Agent 的操作建议。不要修改 `summarize_sales.py` 或任何测试文件。",
+    "files": {
+      "data/sales.csv": "date,product,quantity,price\n2024-01-01,apple,2,1.5\n2024-01-02,banana,3,0.8\n2024-01-03,apple,1,1.5\n",
+      "summarize_sales.py": "import csv\nimport sys\n\n\ndef summarize(path=\"data/sales.csv\"):\n    with open(path, newline=\"\", encoding=\"utf-8\") as f:\n        reader = csv.DictReader(f)\n        total = 0.0\n        for row in reader:\n            total += float(row[\"quantity\"]) * float(row[\"price\"])\n    return total\n\n\nif __name__ == \"__main__\":\n    print(summarize())\n",
+      "tests/test_readonly_analysis.py": "import csv\nimport hashlib\nimport os\nimport shutil\nimport subprocess\nimport sys\nimport tempfile\nimport unittest\n\nWORKSPACE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))\nANALYSIS = os.path.join(WORKSPACE, \"readonly_analysis.py\")\nDATA = os.path.join(WORKSPACE, \"data\", \"sales.csv\")\nSCRIPT = os.path.join(WORKSPACE, \"summarize_sales.py\")\nTEST_FILE = os.path.abspath(__file__)\n\n\ndef sha256(path):\n    h = hashlib.sha256()\n    with open(path, \"rb\") as f:\n        for chunk in iter(lambda: f.read(8192), b\"\"):\n            h.update(chunk)\n    return h.hexdigest()\n\n\ndef run_analysis(cwd):\n    return subprocess.run(\n        [sys.executable, os.path.join(cwd, \"readonly_analysis.py\")],\n        cwd=cwd,\n        capture_output=True,\n        text=True,\n        timeout=30,\n    )\n\n\nclass TestReadonlyAnalysis(unittest.TestCase):\n    def test_initial_files_exist(self):\n        self.assertTrue(os.path.isfile(DATA), f\"{DATA} 不存在\")\n        self.assertTrue(os.path.isfile(SCRIPT), f\"{SCRIPT} 不存在\")\n\n    def test_normal_run(self):\n        proc = run_analysis(WORKSPACE)\n        self.assertEqual(proc.returncode, 0, proc.stderr)\n        out = proc.stdout\n        for needle in [\"只读分析\", \"data/sales.csv\", \"summarize_sales.py\", \"专用文件工具\", \"风险\", \"建议\"]:\n            self.assertIn(needle, out)\n        self.assertTrue(\"shell\" in out or \"命令行\" in out)\n\n    def test_no_modification(self):\n        before = {p: sha256(p) for p in [DATA, SCRIPT, TEST_FILE]}\n        proc = run_analysis(WORKSPACE)\n        self.assertEqual(proc.returncode, 0, proc.stderr)\n        after = {p: sha256(p) for p in [DATA, SCRIPT, TEST_FILE]}\n        self.assertEqual(before, after)\n\n    def test_missing_data_boundary(self):\n        with tempfile.TemporaryDirectory() as tmp:\n            shutil.copy2(ANALYSIS, os.path.join(tmp, \"readonly_analysis.py\"))\n            shutil.copy2(SCRIPT, os.path.join(tmp, \"summarize_sales.py\"))\n            proc = run_analysis(tmp)\n            self.assertNotEqual(proc.returncode, 0)\n            combined = (proc.stdout + proc.stderr).lower()\n            self.assertTrue(\"不存在\" in combined or \"missing\" in combined or \"错误\" in combined)\n\n    def test_empty_csv_boundary(self):\n        with tempfile.TemporaryDirectory() as tmp:\n            os.makedirs(os.path.join(tmp, \"data\"))\n            open(os.path.join(tmp, \"data\", \"sales.csv\"), \"w\", encoding=\"utf-8\").close()\n            shutil.copy2(ANALYSIS, os.path.join(tmp, \"readonly_analysis.py\"))\n            shutil.copy2(SCRIPT, os.path.join(tmp, \"summarize_sales.py\"))\n            proc = run_analysis(tmp)\n            self.assertEqual(proc.returncode, 0, proc.stderr)\n            self.assertIn(\"0\", proc.stdout)\n\n\nif __name__ == \"__main__\":\n    unittest.main()\n"
+    },
+    "checks": [
+      {
+        "type": "file_exists",
+        "path": "readonly_analysis.py"
+      },
+      {
+        "type": "unchanged",
+        "path": "summarize_sales.py"
+      },
+      {
+        "type": "unchanged",
+        "path": "tests/test_readonly_analysis.py"
+      },
+      {
+        "type": "command",
+        "cmd": "{python} -m unittest discover -s tests"
+      }
+    ],
+    "expected_tools": [
+      "read_file",
+      "write_to_file"
+    ],
+    "criteria": "创建 `readonly_analysis.py`（仅标准库），只读检查 `data/sales.csv` 和 `summarize_sales.py`，输出专用文件工具与 shell 命令在读取 CSV、编辑脚本时的差异、风险和建议；不得修改 `summarize_sales.py` 或 `tests/` 下文件；普通输入退出 0 且包含关键分析；缺失 `data/sales.csv` 时非零退出并给出错误；空 CSV 也能处理；`summarize_sales.py` 和测试文件运行前后哈希不变。",
+    "tags": [
+      "generated",
+      "reviewed"
+    ],
+    "approve_commands": false
+  },
+  {
+    "id": "generated_20261012090810_5",
+    "input": "在当前隔离临时目录中，已有 `file_index.py` 和对应的 `unittest` 测试文件；运行 `python -m unittest` 时测试全部失败。请仅修改 `file_index.py`，不要修改任何测试文件，也不要在回复中给出参考答案；请根据已有文件和测试要求做必要修复，使标准库 `unittest` 测试能够通过。",
+    "files": {
+      "file_index.py": "import os\n\n\ndef index_files(root, extensions=None):\n    \"\"\"Index files under ``root``.\n\n    Returns a mapping of file name to size in bytes.\n    \"\"\"\n    if extensions is not None:\n        extensions = tuple(extensions)\n    result = {}\n    for dirpath, dirnames, filenames in os.walk(root):\n        for name in filenames:\n            if extensions is None or name.endswith(extensions):\n                result[name] = os.path.getsize(os.path.join(dirpath, name))\n    return result\n",
+      "tests/test_file_index.py": "import os\nimport tempfile\nimport unittest\n\nfrom file_index import index_files\n\n\nclass IndexFilesTests(unittest.TestCase):\n    def setUp(self):\n        self._tmp = tempfile.TemporaryDirectory()\n        self.root = self._tmp.name\n\n    def tearDown(self):\n        self._tmp.cleanup()\n\n    def _write(self, rel_path, data=b\"\"):\n        parts = rel_path.split(\"/\")\n        full = os.path.join(self.root, *parts)\n        parent = os.path.dirname(full)\n        if parent:\n            os.makedirs(parent, exist_ok=True)\n        with open(full, \"wb\") as handle:\n            handle.write(data)\n        return full\n\n    def test_empty_directory_returns_empty_mapping(self):\n        self.assertEqual(index_files(self.root), {})\n\n    def test_single_file_reports_size(self):\n        self._write(\"alpha.txt\", b\"hello\")\n        self.assertEqual(index_files(self.root), {\"alpha.txt\": 5})\n\n    def test_nested_files_use_relative_paths(self):\n        self._write(\"pkg/mod.py\", b\"123\")\n        self._write(\"pkg/deep/data.bin\", b\"12345678\")\n        expected = {\n            os.path.join(\"pkg\", \"mod.py\"): 3,\n            os.path.join(\"pkg\", \"deep\", \"data.bin\"): 8,\n        }\n        self.assertEqual(index_files(self.root), expected)\n\n    def test_extension_filter_keeps_only_matches(self):\n        self._write(\"a.txt\", b\"aa\")\n        self._write(\"b.py\", b\"bbb\")\n        self._write(\"notes.md\", b\"m\")\n        self.assertEqual(index_files(self.root, [\".py\"]), {\"b.py\": 3})\n\n    def test_extension_filter_accepts_missing_dot(self):\n        self._write(\"a.txt\", b\"aa\")\n        self._write(\"b.py\", b\"bbb\")\n        self.assertEqual(index_files(self.root, [\"py\"]), {\"b.py\": 3})\n\n    def test_extension_filter_is_case_insensitive(self):\n        self._write(\"script.PY\", b\"z\")\n        self.assertEqual(index_files(self.root, [\".py\"]), {\"script.PY\": 1})\n\n    def test_empty_extension_filter_returns_empty_mapping(self):\n        self._write(\"a.txt\", b\"a\")\n        self.assertEqual(index_files(self.root, []), {})\n\n    def test_missing_root_raises_file_not_found(self):\n        missing = os.path.join(self.root, \"does-not-exist\")\n        with self.assertRaises(FileNotFoundError):\n            index_files(missing)\n\n\nif __name__ == \"__main__\":\n    unittest.main()\n"
+    },
+    "checks": [
+      {
+        "type": "file_exists",
+        "path": "file_index.py"
+      },
+      {
+        "type": "unchanged",
+        "path": "tests/test_file_index.py"
+      },
+      {
+        "type": "command",
+        "cmd": "{python} -m unittest discover -s tests"
+      }
+    ],
+    "expected_tools": [
+      "read_file",
+      "replace_in_file"
+    ],
+    "criteria": "仅允许修改 file_index.py。index_files(root, extensions=None) 必须返回 dict[相对路径, 文件字节大小]；extensions 为 None 时包含全部文件，为可迭代对象时仅保留扩展名匹配项（大小写不敏感、允许省略前导点），空可迭代对象返回空 dict；root 非目录时抛出 FileNotFoundError。tests/test_file_index.py 必须保持字节不变，且 python -m unittest discover -s tests 全部通过。仅使用标准库与工作区相对路径。",
+    "tags": [
+      "generated",
+      "reviewed"
+    ],
+    "approve_commands": false
+  }
+]

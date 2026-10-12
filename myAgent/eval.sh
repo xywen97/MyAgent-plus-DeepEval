@@ -20,6 +20,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+DEEPEVAL_RESULTS_FOLDER="$DEEPEVAL_RESULTS_FOLDER/features" "$DEEPEVAL" test run evals/test_features.py --verbose || exit 1
+
 "$DEEPEVAL" test run evals/test_agent.py --verbose "${PYTEST_ARGS[@]+"${PYTEST_ARGS[@]}"}"
 status=$?
 
