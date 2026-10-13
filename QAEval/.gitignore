@@ -1,0 +1,5 @@
+.env
+.venv/
+.deepeval/
+.pytest_cache/
+__pycache__/

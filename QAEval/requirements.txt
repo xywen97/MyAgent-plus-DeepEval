@@ -1,0 +1,3 @@
+# 在 QAEval 目录执行 pip/uv 安装，使用仓库中的 deepeval 4.2.8 源码。
+-e ../deepeval
+python-dotenv>=1.1.1,<2
